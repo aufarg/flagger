@@ -86,6 +86,39 @@ func (c *Controller) nextStepWeight(canary *flaggerv1.Canary, canaryWeight int) 
 	return maxStep
 }
 
+func (c *Controller) nextPromotionWeight(canary *flaggerv1.Canary, primaryWeight int) int {
+	var promotionWeightsLen = len(canary.GetAnalysis().StepWeightsPromotion)
+	if canary.GetAnalysis().StepWeightPromotion > 0 || promotionWeightsLen == 0 {
+		return canary.GetAnalysis().StepWeightPromotion
+	}
+
+	totalWeight := c.totalWeight(canary)
+	maxStep := totalWeight - primaryWeight
+
+	// If maxStep is zero we need to promote, so any non zero step weight will move the canary to promotion.
+	// This is the same use case as the last step via StepWeightPromotion.
+	if maxStep == 0 {
+		return 1
+	}
+
+	// return min of maxStep and the calculated step to avoid going above totalWeight
+
+	// TODO: Fix initial step condition
+	// initial step
+	if primaryWeight == 0 {
+		return c.min(maxStep, canary.GetAnalysis().StepWeights[0])
+	}
+
+	// find the current step and return the difference in weight
+	for i := 0; i < promotionWeightsLen-1; i++ {
+		if canary.GetAnalysis().StepWeights[i] == primaryWeight {
+			return c.min(maxStep, canary.GetAnalysis().StepWeights[i+1]-primaryWeight)
+		}
+	}
+
+	return maxStep
+}
+
 // scheduleCanaries synchronises the canary map with the jobs map,
 // for new canaries new jobs are created and started
 // for the removed canaries the jobs are stopped and deleted
@@ -505,11 +538,12 @@ func (c *Controller) runPromotionTrafficShift(canary *flaggerv1.Canary, canaryCo
 
 	// increment the primary traffic weight until it reaches total weight
 	if canaryWeight > 0 {
-		primaryWeight += canary.GetAnalysis().StepWeightPromotion
+		nextPromotionWeight := c.nextPromotionWeight(canary, primaryWeight)
+		primaryWeight += nextPromotionWeight
 		if primaryWeight > c.totalWeight(canary) {
 			primaryWeight = c.totalWeight(canary)
 		}
-		canaryWeight -= canary.GetAnalysis().StepWeightPromotion
+		canaryWeight -= nextPromotionWeight
 		if canaryWeight < 0 {
 			canaryWeight = 0
 		}

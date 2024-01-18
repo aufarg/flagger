@@ -253,6 +253,10 @@ type CanaryAnalysis struct {
 	// +optional
 	StepWeightPromotion int `json:"stepWeightPromotion,omitempty"`
 
+	// Incremental traffic weight step for promotion phase
+	// +optional
+	StepWeightsPromotion []int `json:"stepWeightsPromotion,omitempty"`
+
 	// Max number of failed checks before the canary is terminated
 	Threshold int `json:"threshold"`
 

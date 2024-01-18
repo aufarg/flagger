@@ -232,6 +232,11 @@ func (in *CanaryAnalysis) DeepCopyInto(out *CanaryAnalysis) {
 		*out = make([]int, len(*in))
 		copy(*out, *in)
 	}
+	if in.StepWeightsPromotion != nil {
+		in, out := &in.StepWeightsPromotion, &out.StepWeightsPromotion
+		*out = make([]int, len(*in))
+		copy(*out, *in)
+	}
 	if in.PrimaryReadyThreshold != nil {
 		in, out := &in.PrimaryReadyThreshold, &out.PrimaryReadyThreshold
 		*out = new(int)
